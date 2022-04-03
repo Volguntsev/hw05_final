@@ -38,23 +38,22 @@ def group_posts(request, slug):
 
 
 def profile(request, username):
-    
     template = 'posts/profile.html'
     author = get_object_or_404(User, username=username)
     posts = author.posts.all()
     page_obj = get_page_obj(request, posts)
     if request.user.is_anonymous:
         context = {
-        'author': author,
-        'page_obj': page_obj,
+            'author': author,
+            'page_obj': page_obj,
         }
         return render(request, template, context)
 
     else:
         following = Follow.objects.filter(
-            user=request.user, 
+            user=request.user,
             author=User.objects.get(username=username)
-            ).exists()
+        ).exists()
         context = {
             'author': author,
             'page_obj': page_obj,
@@ -142,11 +141,9 @@ def follow_index(request):
 
 @login_required
 def profile_follow(request, username):
-    if (username != request.user.username and
-        not Follow.objects.filter(
-        user=request.user,
-        author=User.objects.get(username=username)
-        ).exists()):
+    if ((username != request.user.username) and (not Follow.objects.filter(
+            user=request.user,
+            author=User.objects.get(username=username))).exists()):
         Follow.objects.create(
             user=request.user,
             author=get_object_or_404(User, username=username))

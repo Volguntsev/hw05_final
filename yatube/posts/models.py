@@ -84,8 +84,9 @@ class Comment(models.Model):
         verbose_name='Дата публикации'
     )
 
+
 class Follow(models.Model):
-    user =  models.ForeignKey(
+    user = models.ForeignKey(
         User,
         related_name='follower',
         verbose_name='Подписчик',
@@ -99,16 +100,3 @@ class Follow(models.Model):
         on_delete=models.CASCADE,
         blank=True,
     )
-"""
-    class Meta:
-        unique_together = ['user', 'author']
-        constraints = [
-            models.CheckConstraint(
-                check=~models.Q(
-                    user=models.F('author')
-                ),
-                name='user_is_not_author'
-            ),
-        ]
-        """
-        
