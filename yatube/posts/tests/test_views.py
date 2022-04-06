@@ -6,26 +6,20 @@ from django.urls import reverse
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 
-from ..models import Post, Group, User
-from ..settings import COUNT_POSTS_IN_PAGE
+from ..models import Post, Group, User, Follow
+from ..settings import COUNT_POSTS_IN_PAGE, SMALL_GIF
 
 GROUP_SLUG = 'test-slug'
 GROUP_SLUG_2 = 'group-2'
 USERNAME = 'auth'
+USERNAME_2 = 'author'
 
 URL_MAIN = reverse('posts:index')
-URL_GROUP = reverse('posts:group_list', kwargs={'slug': GROUP_SLUG})
-URL_GROUP_2 = reverse('posts:group_list', kwargs={'slug': GROUP_SLUG_2})
-URL_PROFILE = reverse('posts:profile', kwargs={'username': USERNAME})
+URL_GROUP = reverse('posts:group_list', args=[GROUP_SLUG])
+URL_GROUP_2 = reverse('posts:group_list', args=[GROUP_SLUG_2])
+URL_PROFILE = reverse('posts:profile', args=[USERNAME])
+URL_FOLLOW = reverse('posts:follow_index')
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
-SMAL_GIF = (
-    b'\x47\x49\x46\x38\x39\x61\x02\x00'
-    b'\x01\x00\x80\x00\x00\x00\x00\x00'
-    b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
-    b'\x00\x00\x00\x2C\x00\x00\x00\x00'
-    b'\x02\x00\x01\x00\x00\x02\x02\x0C'
-    b'\x0A\x00\x3B'
-)
 
 
 @override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
@@ -34,9 +28,10 @@ class PagesTests(TestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.user = User.objects.create_user(username=USERNAME)
+        cls.user_2 = User.objects.create_user(username=USERNAME_2)
         cls.uploaded = SimpleUploadedFile(
             name='small.gif',
-            content=SMAL_GIF,
+            content=SMALL_GIF,
             content_type='image/gif'
         )
         cls.group = Group.objects.create(
@@ -55,39 +50,48 @@ class PagesTests(TestCase):
             group=cls.group,
             image=cls.uploaded,
         )
+        cls.guest_client = Client()
+        cls.authorized_client = Client()
+        cls.follower = Client()
+        cls.authorized_client.force_login(cls.user)
+        cls.follower.force_login(cls.user_2)
+        cls.subscription = Follow.objects.create(
+            user=cls.user_2,
+            author=cls.user
+        )
         cls.URL_POST_DETAIL = reverse(
             'posts:post_detail', kwargs={'post_id': cls.post.pk})
+        cls.PROFILE_FOLLOW = reverse(
+            'posts:profile_follow', kwargs={'username': USERNAME})
+        cls.PROFILE_UNFOLLOW = reverse(
+            'posts:profile_unfollow', kwargs={'username': USERNAME})
 
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()
         shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
-    def setUp(self):
-        self.guest_client = Client()
-        self.authorized_client = Client()
-        self.authorized_client.force_login(PagesTests.user)
-
     def test_page_show_correct_context(self):
-        """Шаблон index, group, profile сформирован с правильным контекстом."""
+        """Шаблон index, group, profile, follow
+        сформирован с правильным контекстом."""
         Urls = [
             [URL_MAIN, 'page_obj'],
             [URL_GROUP, 'page_obj'],
             [URL_PROFILE, 'page_obj'],
             [self.URL_POST_DETAIL, 'post'],
+            [URL_FOLLOW, 'page_obj'],
         ]
 
         for address, var_context in Urls:
             with self.subTest(address=address):
-                page = self.authorized_client.get(address).context[var_context]
+                page = self.follower.get(address).context[var_context]
                 if (var_context == 'page_obj'):
                     self.assertEqual(len(page), 1)
                     post = page[0]
                 else:
                     post = page
                 self.assertEqual(post.text, self.post.text)
-                self.assertEqual(
-                    post.image.name, 'posts/' + self.uploaded.name)
+                self.assertEqual(post.image, self.post.image)
                 self.assertEqual(post.pk, self.post.pk)
                 self.assertEqual(post.group, self.post.group)
                 self.assertEqual(post.author, self.post.author)
@@ -111,6 +115,18 @@ class PagesTests(TestCase):
         page = self.authorized_client.get(URL_GROUP_2).context['page_obj']
         self.assertNotIn(self.post, page)
 
+    def test_unfollow_correct(self):
+        """Отписка."""
+        self.follower.get(self.PROFILE_UNFOLLOW)
+        self.assertNotIn(self.subscription, Follow.objects.all())
+
+    def test_follow_correct(self):
+        """Подписка."""
+        self.follower.get(self.PROFILE_FOLLOW)
+        self.assertIn(Follow.objects.get(
+            user=self.user_2,
+            author=self.user), Follow.objects.all())
+
 
 class PaginatorViewsTest(TestCase):
     @classmethod
@@ -127,9 +143,7 @@ class PaginatorViewsTest(TestCase):
             author=cls.user, text=f'Тестовый пост {i}', group=cls.group)
             for i in range(cls.count_posts)]
         )
-
-    def setUp(self):
-        self.guest_client = Client()
+        cls.guest_client = Client()
 
     def test_page_contains_records(self):
         paginator_ursl = {

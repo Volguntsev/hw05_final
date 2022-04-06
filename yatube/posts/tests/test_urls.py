@@ -10,10 +10,12 @@ NEXT = '{}?next={}'
 
 URL_MAIN = reverse('posts:index')
 URL_CREATE = reverse('posts:create')
-URL_GROUP = reverse('posts:group_list', kwargs={'slug': GROUP_SLUG})
-URL_PROFILE = reverse('posts:profile', kwargs={'username': USERNAME})
+URL_GROUP = reverse('posts:group_list', args=[GROUP_SLUG])
+URL_PROFILE = reverse('posts:profile', args=[USERNAME])
 URL_LOGIN = reverse('users:login')
 URL_CREATE_REDIRECT = NEXT.format(URL_LOGIN, URL_CREATE)
+URL_FOLLOW = reverse('posts:follow_index')
+URL_FOLLOW_REDIRECT = NEXT.format(URL_LOGIN, URL_FOLLOW)
 
 
 class PostURLTests(TestCase):
@@ -31,18 +33,24 @@ class PostURLTests(TestCase):
             author=cls.user,
             text='Тестовый пост',
         )
+        cls.guest = Client()
+        cls.author = Client()
+        cls.another = Client()
+        cls.author.force_login(cls.user)
+        cls.another.force_login(cls.user_2)
         cls.URL_POST_EDIT = reverse(
             'posts:post_edit', kwargs={'post_id': cls.post.pk})
         cls.URL_POST_DETAIL = reverse(
             'posts:post_detail', kwargs={'post_id': cls.post.pk})
         cls.URL_POST_EDIT_REDIRECT = NEXT.format(URL_LOGIN, cls.URL_POST_EDIT)
-
-    def setUp(self):
-        self.guest = Client()
-        self.author = Client()
-        self.another = Client()
-        self.author.force_login(self.user)
-        self.another.force_login(self.user_2)
+        cls.URL_ADD_COMMENT = reverse(
+            'posts:add_comment', kwargs={'post_id': cls.post.pk})
+        cls.URL_ADD_COMENT_REDIRECT = NEXT.format(
+            URL_LOGIN, cls.URL_ADD_COMMENT)
+        cls.PROFILE_FOLLOW = reverse(
+            'posts:profile_follow', kwargs={'username': USERNAME})
+        cls.PROFILE_FOLLOW_REDIRECT = NEXT.format(
+            URL_LOGIN, cls.PROFILE_FOLLOW)
 
     def test_redirect_page(self):
         """Страницы перенаправляют пользователя"""
@@ -52,6 +60,9 @@ class PostURLTests(TestCase):
             [self.URL_POST_EDIT, self.another,
                 self.URL_POST_DETAIL],
             [URL_CREATE, self.guest, URL_CREATE_REDIRECT],
+            [self.URL_ADD_COMMENT, self.guest, self.URL_ADD_COMENT_REDIRECT],
+            [URL_FOLLOW, self.guest, URL_FOLLOW_REDIRECT],
+            [self.PROFILE_FOLLOW, self.guest, self.PROFILE_FOLLOW_REDIRECT],
         ]
         for address, client, redirect_url in redirect_page_url:
             with self.subTest(address=address, user=client):
@@ -72,6 +83,11 @@ class PostURLTests(TestCase):
             [self.URL_POST_EDIT, self.another, 302],
             [URL_CREATE, self.author, 200],
             [self.URL_POST_EDIT, self.author, 200],
+            [self.URL_ADD_COMMENT, self.author, 302],
+            [self.URL_ADD_COMMENT, self.another, 302],
+            [self.PROFILE_FOLLOW, self.another, 302],
+            [URL_FOLLOW, self.another, 200],
+            [URL_FOLLOW, self.guest, 302],
         ]
 
         for address, client, code in code_page_url:
