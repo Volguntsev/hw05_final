@@ -32,16 +32,19 @@ def group_posts(request, slug):
 
 def profile(request, username):
     author = get_object_or_404(User, username=username)
+    following = (
+        (request.user.is_authenticated) and (
+            request.user.username != username) and (
+                Follow.objects.filter(
+                    user=request.user,
+                    author=author).exists()
+        )
+    )
     context = {
         'author': author,
         'page_obj': get_page_obj(request, author.posts.all()),
+        'following': following
     }
-    if request.user.is_authenticated:
-        following = Follow.objects.filter(
-            user=request.user,
-            author=author
-        ).exists()
-        context['following'] = following
     return render(request, 'posts/profile.html', context)
 
 
@@ -55,13 +58,12 @@ def post_detail(request, post_id):
 
 @login_required
 def post_create(request):
-    template = 'posts/create_post.html'
     form = PostForm(
         request.POST or None,
         files=request.FILES or None,
     )
     if not form.is_valid():
-        return render(request, template, {'form': form}, )
+        return render(request, 'posts/create_post.html', {'form': form}, )
 
     new_post = form.save(commit=False)
     new_post.author = request.user
@@ -127,8 +129,7 @@ def profile_follow(request, username):
 
 @login_required
 def profile_unfollow(request, username):
-    author = get_object_or_404(User, username=username)
     Follow.objects.filter(
         user=request.user,
-        author=author).delete()
+        author__username=username).delete()
     return redirect('posts:profile', username=username)

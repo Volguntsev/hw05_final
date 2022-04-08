@@ -6,8 +6,9 @@ from django.urls import reverse
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 
+from .const import SMALL_GIF
 from ..models import Post, Group, User, Follow
-from ..settings import COUNT_POSTS_IN_PAGE, SMALL_GIF
+from ..settings import COUNT_POSTS_IN_PAGE
 
 GROUP_SLUG = 'test-slug'
 GROUP_SLUG_2 = 'group-2'
@@ -20,6 +21,8 @@ URL_GROUP_2 = reverse('posts:group_list', args=[GROUP_SLUG_2])
 URL_PROFILE = reverse('posts:profile', args=[USERNAME])
 URL_FOLLOW = reverse('posts:follow_index')
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
+URL_PROFILE_FOLLOW = reverse('posts:profile_follow', args=[USERNAME])
+URL_PROFILE_UNFOLLOW = reverse('posts:profile_unfollow', args=[USERNAME])
 
 
 @override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
@@ -61,10 +64,6 @@ class PagesTests(TestCase):
         )
         cls.URL_POST_DETAIL = reverse(
             'posts:post_detail', kwargs={'post_id': cls.post.pk})
-        cls.PROFILE_FOLLOW = reverse(
-            'posts:profile_follow', kwargs={'username': USERNAME})
-        cls.PROFILE_UNFOLLOW = reverse(
-            'posts:profile_unfollow', kwargs={'username': USERNAME})
 
     @classmethod
     def tearDownClass(cls):
@@ -110,22 +109,33 @@ class PagesTests(TestCase):
         self.assertEqual(group.slug, self.group.slug)
         self.assertEqual(group.description, self.group.description)
 
-    def test_othet_group_page_correct_context(self):
-        """Пост не попал на чужую Групп-ленту."""
-        page = self.authorized_client.get(URL_GROUP_2).context['page_obj']
-        self.assertNotIn(self.post, page)
+    def test_post_not_in_context(self):
+        """Пост не попал на чужую Групп-ленту. и в чужие подписки"""
+        Urls = [
+            [URL_GROUP_2, 'page_obj'],
+            [URL_FOLLOW, 'page_obj'],
+        ]
+        for address, var_context in Urls:
+            with self.subTest(address=address):
+                page = self.authorized_client.get(address).context[var_context]
+                self.assertNotIn(self.post, page)
+                self.assertEqual(len(page), 0)
 
     def test_unfollow_correct(self):
         """Отписка."""
-        self.follower.get(self.PROFILE_UNFOLLOW)
-        self.assertNotIn(self.subscription, Follow.objects.all())
+        self.follower.get(URL_PROFILE_UNFOLLOW)
+        self.assertFalse(
+            Follow.objects.filter(
+                user=self.user_2,
+                author=self.user).exists())
 
     def test_follow_correct(self):
         """Подписка."""
-        self.follower.get(self.PROFILE_FOLLOW)
-        self.assertIn(Follow.objects.get(
-            user=self.user_2,
-            author=self.user), Follow.objects.all())
+        self.follower.get(URL_PROFILE_FOLLOW)
+        self.assertTrue(
+            Follow.objects.filter(
+                user=self.user_2,
+                author=self.user).exists())
 
 
 class PaginatorViewsTest(TestCase):
@@ -138,10 +148,11 @@ class PaginatorViewsTest(TestCase):
             slug=GROUP_SLUG,
             description='Тестовое описание',
         )
-        cls.count_posts = COUNT_POSTS_IN_PAGE + 3
-        Post.objects.bulk_create([Post(
+        cls.count_posts_in_2_page = 3
+        cls.count_posts = COUNT_POSTS_IN_PAGE + cls.count_posts_in_2_page
+        Post.objects.bulk_create(Post(
             author=cls.user, text=f'Тестовый пост {i}', group=cls.group)
-            for i in range(cls.count_posts)]
+            for i in range(cls.count_posts)
         )
         cls.guest_client = Client()
 
@@ -150,9 +161,9 @@ class PaginatorViewsTest(TestCase):
             URL_MAIN: COUNT_POSTS_IN_PAGE,
             URL_GROUP: COUNT_POSTS_IN_PAGE,
             URL_PROFILE: COUNT_POSTS_IN_PAGE,
-            URL_MAIN + '?page=2': self.count_posts - COUNT_POSTS_IN_PAGE,
-            URL_GROUP + '?page=2': self.count_posts - COUNT_POSTS_IN_PAGE,
-            URL_PROFILE + '?page=2': self.count_posts - COUNT_POSTS_IN_PAGE,
+            URL_MAIN + '?page=2': self.count_posts_in_2_page,
+            URL_GROUP + '?page=2': self.count_posts_in_2_page,
+            URL_PROFILE + '?page=2': self.count_posts_in_2_page,
         }
         for address, count_posts in paginator_ursl.items():
             with self.subTest(address=address):

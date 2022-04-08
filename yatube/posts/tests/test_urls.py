@@ -16,6 +16,10 @@ URL_LOGIN = reverse('users:login')
 URL_CREATE_REDIRECT = NEXT.format(URL_LOGIN, URL_CREATE)
 URL_FOLLOW = reverse('posts:follow_index')
 URL_FOLLOW_REDIRECT = NEXT.format(URL_LOGIN, URL_FOLLOW)
+URL_PROFILE_FOLLOW = reverse('posts:profile_follow', args=[USERNAME])
+URL_PROFILE_FOLLOW_REDIRECT = NEXT.format(URL_LOGIN, URL_PROFILE_FOLLOW)
+URL_PROFILE_UNFOLLOW = reverse('posts:profile_unfollow', args=[USERNAME])
+URL_PROFILE_UNFOLLOW_REDIRECT = NEXT.format(URL_LOGIN, URL_PROFILE_UNFOLLOW)
 
 
 class PostURLTests(TestCase):
@@ -43,14 +47,6 @@ class PostURLTests(TestCase):
         cls.URL_POST_DETAIL = reverse(
             'posts:post_detail', kwargs={'post_id': cls.post.pk})
         cls.URL_POST_EDIT_REDIRECT = NEXT.format(URL_LOGIN, cls.URL_POST_EDIT)
-        cls.URL_ADD_COMMENT = reverse(
-            'posts:add_comment', kwargs={'post_id': cls.post.pk})
-        cls.URL_ADD_COMENT_REDIRECT = NEXT.format(
-            URL_LOGIN, cls.URL_ADD_COMMENT)
-        cls.PROFILE_FOLLOW = reverse(
-            'posts:profile_follow', kwargs={'username': USERNAME})
-        cls.PROFILE_FOLLOW_REDIRECT = NEXT.format(
-            URL_LOGIN, cls.PROFILE_FOLLOW)
 
     def test_redirect_page(self):
         """Страницы перенаправляют пользователя"""
@@ -60,9 +56,9 @@ class PostURLTests(TestCase):
             [self.URL_POST_EDIT, self.another,
                 self.URL_POST_DETAIL],
             [URL_CREATE, self.guest, URL_CREATE_REDIRECT],
-            [self.URL_ADD_COMMENT, self.guest, self.URL_ADD_COMENT_REDIRECT],
             [URL_FOLLOW, self.guest, URL_FOLLOW_REDIRECT],
-            [self.PROFILE_FOLLOW, self.guest, self.PROFILE_FOLLOW_REDIRECT],
+            [URL_PROFILE_FOLLOW, self.guest, URL_PROFILE_FOLLOW_REDIRECT],
+            [URL_PROFILE_UNFOLLOW, self.guest, URL_PROFILE_UNFOLLOW_REDIRECT],
         ]
         for address, client, redirect_url in redirect_page_url:
             with self.subTest(address=address, user=client):
@@ -83,9 +79,8 @@ class PostURLTests(TestCase):
             [self.URL_POST_EDIT, self.another, 302],
             [URL_CREATE, self.author, 200],
             [self.URL_POST_EDIT, self.author, 200],
-            [self.URL_ADD_COMMENT, self.author, 302],
-            [self.URL_ADD_COMMENT, self.another, 302],
-            [self.PROFILE_FOLLOW, self.another, 302],
+            [URL_PROFILE_FOLLOW, self.another, 302],
+            [URL_PROFILE_UNFOLLOW, self.another, 302],
             [URL_FOLLOW, self.another, 200],
             [URL_FOLLOW, self.guest, 302],
         ]
@@ -104,6 +99,7 @@ class PostURLTests(TestCase):
             URL_CREATE: 'posts/create_post.html',
             self.URL_POST_DETAIL: 'posts/post_detail.html',
             self.URL_POST_EDIT: 'posts/create_post.html',
+            URL_FOLLOW: 'posts/follow.html',
             '/unexisting_page/': 'core/404.html'
         }
         for address, template in templates_url_names.items():

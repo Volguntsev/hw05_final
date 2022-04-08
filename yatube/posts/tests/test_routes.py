@@ -1,6 +1,8 @@
 from django.test import TestCase
 from django.urls import reverse
 
+from ..urls import app_name
+
 GROUP_SLUG = 'test-slug'
 USERNAME = 'auth'
 POST_ID = 7
@@ -24,4 +26,4 @@ class URLSTests(TestCase):
 
         for name, url, args in urls_pages_names:
             with self.subTest(url=url):
-                self.assertEqual(reverse('posts:' + name, args=args), url)
+                self.assertEqual(reverse(f'{app_name}:{name}', args=args), url)
