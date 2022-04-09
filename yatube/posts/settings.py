@@ -1,2 +1,1 @@
 COUNT_POSTS_IN_PAGE = 10
-
