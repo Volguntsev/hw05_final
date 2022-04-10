@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth import get_user_model
 
 
+UPLOAD_POSTS = 'posts/'
 POST_STR = (
     '{text}\n'
     'Дата Публикации: {pub_date}\n'
@@ -46,7 +47,7 @@ class Post(models.Model):
     )
     image = models.ImageField(
         'Картинка',
-        upload_to='posts/',
+        upload_to=UPLOAD_POSTS,
         blank=True
     )
 

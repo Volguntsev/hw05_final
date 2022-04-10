@@ -8,8 +8,7 @@ from django.urls import reverse
 
 from .const import SMALL_GIF
 from posts.forms import PostForm, CommentForm
-from posts.models import Post, Group, User, Comment
-from ..urls import app_name
+from posts.models import Post, Group, User, Comment, UPLOAD_POSTS
 
 GROUP_SLUG = 'test-slug'
 GROUP_SLUG_2 = 'group-2'
@@ -91,7 +90,7 @@ class PostCreateFormTests(TestCase):
         new_post = new_posts[0]
         self.assertEqual(new_post.text, form_data['text'])
         self.assertEqual(
-            new_post.image.name, f'{app_name}/' + form_data['image'].name)
+            new_post.image.name, UPLOAD_POSTS + form_data['image'].name)
         self.assertEqual(new_post.group.pk, form_data['group'])
         self.assertEqual(new_post.author, self.user)
 
@@ -133,7 +132,7 @@ class PostCreateFormTests(TestCase):
         self.assertEqual(edit_post.group.pk, form_data['group'])
         self.assertEqual(edit_post.author, self.post.author)
         self.assertEqual(
-            edit_post.image.name, f'{app_name}/' + form_data['image'].name)
+            edit_post.image.name, UPLOAD_POSTS + form_data['image'].name)
 
     def test_create_comment(self):
         """Валидная форма создает коментарий"""
