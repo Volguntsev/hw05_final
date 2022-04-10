@@ -59,6 +59,9 @@ class PostURLTests(TestCase):
             [URL_FOLLOW, self.guest, URL_FOLLOW_REDIRECT],
             [URL_PROFILE_FOLLOW, self.guest, URL_PROFILE_FOLLOW_REDIRECT],
             [URL_PROFILE_UNFOLLOW, self.guest, URL_PROFILE_UNFOLLOW_REDIRECT],
+            [URL_PROFILE_FOLLOW, self.another, URL_PROFILE],
+            [URL_PROFILE_UNFOLLOW, self.another, URL_PROFILE],
+            [URL_PROFILE_FOLLOW, self.author, URL_PROFILE],
         ]
         for address, client, redirect_url in redirect_page_url:
             with self.subTest(address=address, user=client):
@@ -81,6 +84,10 @@ class PostURLTests(TestCase):
             [self.URL_POST_EDIT, self.author, 200],
             [URL_PROFILE_FOLLOW, self.another, 302],
             [URL_PROFILE_UNFOLLOW, self.another, 302],
+            [URL_PROFILE_FOLLOW, self.guest, 302],
+            [URL_PROFILE_UNFOLLOW, self.guest, 302],
+            [URL_PROFILE_FOLLOW, self.author, 302],
+            [URL_PROFILE_UNFOLLOW, self.author, 404],
             [URL_FOLLOW, self.another, 200],
             [URL_FOLLOW, self.guest, 302],
         ]

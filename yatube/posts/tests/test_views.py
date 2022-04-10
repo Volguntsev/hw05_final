@@ -119,7 +119,6 @@ class PagesTests(TestCase):
             with self.subTest(address=address):
                 page = self.authorized_client.get(address).context[var_context]
                 self.assertNotIn(self.post, page)
-                self.assertEqual(len(page), 0)
 
     def test_unfollow_correct(self):
         """Отписка."""

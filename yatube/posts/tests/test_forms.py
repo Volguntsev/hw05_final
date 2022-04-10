@@ -9,6 +9,7 @@ from django.urls import reverse
 from .const import SMALL_GIF
 from posts.forms import PostForm, CommentForm
 from posts.models import Post, Group, User, Comment
+from ..urls import app_name
 
 GROUP_SLUG = 'test-slug'
 GROUP_SLUG_2 = 'group-2'
@@ -90,13 +91,13 @@ class PostCreateFormTests(TestCase):
         new_post = new_posts[0]
         self.assertEqual(new_post.text, form_data['text'])
         self.assertEqual(
-            new_post.image.name, 'posts/' + form_data['image'].name)
+            new_post.image.name, f'{app_name}/' + form_data['image'].name)
         self.assertEqual(new_post.group.pk, form_data['group'])
         self.assertEqual(new_post.author, self.user)
 
     def test_guest_create_post(self):
         """Аноним не сможет создать пост."""
-        posts_count = Post.objects.all().count()
+        posts = set(Post.objects.all())
         form_data = {
             'text': 'Тестовый новый пост',
             'group': self.group.pk,
@@ -107,7 +108,7 @@ class PostCreateFormTests(TestCase):
             follow=True
         )
         self.assertRedirects(response, URL_CREATE_REDIRECT)
-        self.assertEqual(posts_count, Post.objects.all().count())
+        self.assertEqual(posts, set(Post.objects.all()))
 
     def test_edit_post(self):
         """Валидная форма Сохраняет изменения"""
@@ -132,7 +133,7 @@ class PostCreateFormTests(TestCase):
         self.assertEqual(edit_post.group.pk, form_data['group'])
         self.assertEqual(edit_post.author, self.post.author)
         self.assertEqual(
-            edit_post.image.name, 'posts/' + form_data['image'].name)
+            edit_post.image.name, f'{app_name}/' + form_data['image'].name)
 
     def test_create_comment(self):
         """Валидная форма создает коментарий"""
@@ -155,7 +156,7 @@ class PostCreateFormTests(TestCase):
 
     def test_create_comment_anonymously(self):
         """Аноним не сможет создать комментарий."""
-        count_comments = Comment.objects.all().count()
+        comments = set(Comment.objects.all())
         form_data = {
             'text': 'Тестовый коментарий',
         }
@@ -164,7 +165,7 @@ class PostCreateFormTests(TestCase):
             data=form_data,
             follow=True
         )
-        self.assertEqual(count_comments, Comment.objects.all().count())
+        self.assertEqual(comments, set(Comment.objects.all()))
 
     def test_edir_post_anonymously(self):
         """Попытки анонима и не-автора отредактировать пост."""
